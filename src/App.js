@@ -4,7 +4,7 @@ import { Footer } from "./MyComponents/Footer";
 import Catalog from "./MyComponents/Catalog"
 import { InputItems } from "./MyComponents/InputItems";
 import {ShopItems} from "./MyComponents/ShopItems";
-import { Busket } from "./MyComponents/Busket"
+import { BusketButton } from "./MyComponents/BusketButton"
 import { BusketItems } from "./MyComponents/BusketItems";
 import React, {useState, useEffect} from "react";
 import {
@@ -13,87 +13,88 @@ import {
   Route
 } from "react-router-dom";
 
-function App() {
-  let initTodo;
-  if (localStorage.getItem("purchases") === null) {
-    initTodo = [];
-  }
-  else {
-    initTodo = JSON.parse(localStorage.getItem("purchases"));
-  }
-
-  let bPurchases;
-  if (localStorage.getItem("busketpurchases") === null) {
-    bPurchases = [];
-  }
-  else {
-    bPurchases = JSON.parse(localStorage.getItem("busketpurchases"))
-  }
-  //===============================================================
-
-
-
-
-
-
+export default function App() {
+  // Get items  ============================
+  const dbPurchases = localStorage.getItem("purchases");
+  const dbShopItems = dbPurchases === null ? [] : JSON.parse(dbPurchases);
+  const dbBusketPurchases = localStorage.getItem("busketpurchases");
+  const dbBusketItems = dbBusketPurchases === null ? [] : JSON.parse(dbBusketPurchases);
+  const dbBusketTimer = localStorage.getItem("busketbill");
+  const dbBusketBill = dbBusketTimer === null ? 0 : JSON.parse(dbBusketTimer);
+  //Functions  =======================================================================
   const addPurchase = (name, price, place) => {
     let sno;
     if (purchases.length === 0) {
       sno = 0;
-    }
-    else {
+    }  else {
       sno = purchases[purchases.length - 1].sno + 1;
     }
     const myPurchase = {
       sno: sno,
       name: name,
       price: price,
-      place: place
+      place: place,
+      number: 1
     }
     setPurchases([...purchases, myPurchase]);
   }
 
   const addBasketItem = (item) => {
-    let sno;
-    if (bItems.length === 0) {
-      sno = 0;
+    let i=0;
+    if(busketItems !== null){
+      busketItems.forEach(e => {
+        if(e===item) {
+          item.number++;
+          i++;
+          setBusketBill(Number(busketBill)+Number(e.price));
+        }});
     }
-    else {
-      sno = bItems[bItems.length - 1].sno + 1;
+    if (i == 0)
+    {
+      setBusketItems([...busketItems, item]);
     }
-    setBItems([...bItems, item]);
+    localStorage.setItem("busketpurchases", JSON.stringify(busketItems));
   }
+
+  const addBusketNumber = (item) => {
+    setBusketItems(busketItems.filter((e) => {
+      if (e === item) {
+        setBusketBill(Number(busketBill)+Number(item.price));
+        return e.number++;
+      }
+      setBusketBill(Number(busketBill)+Number(item.price));
+      return e !== item;
+    }));
+  }
+
 
   const onDelete = (delItem) => {
-    console.log(" I am ondelete of busketItem", delItem);
-
-    setBItems(bItems.filter((e) => {
+    setBusketItems(busketItems.filter((e) => {
+      if (e === delItem && e.number > 1) {
+        setBusketBill(Number(busketBill)-Number(e.price));
+        return e.number--;
+      }
       return e !== delItem;
     }));
-    console.log("deleted", delItem);
-    localStorage.setItem("busketpurchases", JSON.stringify(bItems));
+    localStorage.setItem("busketpurchases", JSON.stringify(busketItems));
   }
-
-
-
-
-
-
-  //===============================================================
-  const [bItems, setBItems] = useState(bPurchases)
+  //States  ==============================
+  const [busketItems, setBusketItems] = useState(dbBusketItems)
   useEffect(() => {
-    localStorage.setItem("busketpurchases", JSON.stringify(bItems));
-  }, [bItems])
+    localStorage.setItem("busketpurchases", JSON.stringify(busketItems));
+  }, [busketItems])
 
-  const [purchases, setPurchases] = useState(initTodo);
+  const [purchases, setPurchases] = useState(dbShopItems);
   useEffect(() => {
     localStorage.setItem("purchases", JSON.stringify(purchases));
   }, [purchases])
 
-  const [busketActive, setBusketActive] = useState(true)
+  const [busketActive, setBusketActive] = useState(false)
 
-
-
+  const [busketBill, setBusketBill] = useState(dbBusketBill);
+  useEffect(() => {
+    localStorage.setItem("busketbill", JSON.stringify(busketBill));
+  }, [busketBill])
 
   return (
     <>
@@ -105,8 +106,8 @@ function App() {
               <Route exact path={"/"} render = {() => {
                 return (
                     <div className="all-logic">
-                      <Busket setBusketActive={setBusketActive}/>
-                      <BusketItems busketItems={bItems} onDelete={onDelete} busketActive={busketActive} setBusketActive={setBusketActive} />
+                      <BusketButton setBusketActive={setBusketActive}/>
+                      <BusketItems busketItems={busketItems} onDelete={onDelete} busketActive={busketActive} setBusketActive={setBusketActive} addBusketNumber={addBusketNumber} busketBill={busketBill}/>
                       <div className="section-inf">
                         <InputItems addPurchase={addPurchase} />
                         <ShopItems purchases={purchases} addBusketItem={addBasketItem}/>
@@ -123,5 +124,3 @@ function App() {
     </>
   );
 }
-
-export default App;
